@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Paulo OS</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #000;
+            color: white;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 480px;
+            max-height: 480px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+            transition: transform 0.3s ease-out;
+        }
+        
+        .screen.active {
+            display: flex;
+            z-index: 1;
+        }
+        
+        .screen.slide-left {
+            transform: translateX(-100%);
+        }
+        
+        .screen.slide-right {
+            transform: translateX(100%);
+        }
+        
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .status-circle {
+            width: 60%;
+            height: 60%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-indicator {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+        
+        .energy-indicator {
+            clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 50%);
+            background: linear-gradient(135deg, transparent 0%, #4CAF50 100%);
+            opacity: 0.8;
+        }
+        
+        .mood-indicator {
+            clip-path: polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%);
+            background: linear-gradient(225deg, transparent 0%, #2196F3 100%);
+            opacity: 0.8;
+        }
+        
+        .focus-indicator {
+            clip-path: polygon(50% 50%, 50% 100%, 0 100%, 0 50%);
+            background: linear-gradient(315deg, transparent 0%, #FFC107 100%);
+            opacity: 0.8;
+        }
+        
+        .recovery-indicator {
+            clip-path: polygon(50% 50%, 0 50%, 0 0, 50% 0);
+            background: linear-gradient(45deg, transparent 0%, #9C27B0 100%);
+            opacity: 0.8;
+        }
+        
+        .status-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            z-index: 2;
+        }
+        
+        .status-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            z-index: 2;
+            margin-top: 5px;
+        }
+        
+        .module-icons {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .module-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .module-icon:active {
+            transform: scale(0.95);
+        }
+        
+        .vitoria {
+            background-color: #9C27B0;
+        }
+        
+        .fisico {
+            background-color: #F44336;
+        }
+        
+        .bem-estar {
+            background-color: #4CAF50;
+        }
+        
+        .produtividade {
+            background-color: #2196F3;
+        }
+        
+        .time {
+            position: absolute;
+            top: 20px;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .date {
+            position: absolute;
+            bottom: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .module-screen {
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .module-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: white;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .module-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-height: 70%;
+            overflow-y: auto;
+            padding: 0 10px;
+            margin-top: 40px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .task-item, .metric-item {
+            width: 100%;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .task-item.high-priority {
+            border-left: 3px solid #F44336;
+        }
+        
+        .task-item.medium-priority {
+            border-left: 3px solid #FFC107;
+        }
+        
+        .action-buttons {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .action-button {
+            width: 80%;
+            padding: 12px;
+            background-color: #2196F3;
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .action-button:active {
+            transform: scale(0.98);
+        }
+        
+        .action-button.primary {
+            background-color: #4CAF50;
+        }
+        
+        .action-button.secondary {
+            background-color: #9C27B0;
+        }
+        
+        .action-button.warning {
+            background-color: #FFC107;
+            color: black;
+        }
+        
+        .scale-selector {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        
+        .scale-item {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .scale-item.selected {
+            background-color: #4CAF50;
+        }
+        
+        .notification {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(33, 150, 243, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 100;
+            pointer-events: none;
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .notification.urgent {
+            background-color: rgba(244, 67, 54, 0.9);
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .back-button:before {
+            content: "←";
+            font-size: 18px;
+        }
+        
+        .progress-ring {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .progress-ring circle {
+            transition: stroke-dashoffset 0.3s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            stroke: #4CAF50;
+        }
+        
+        @media (max-width: 320px) {
+            .module-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+            
+            .status-value {
+                font-size: 20px;
+            }
+            
+            .task-item, .metric-item {
+                padding: 10px;
+                font-size: 12px;
+            }
+            
+            .action-button {
+                padding: 10px;
+                font-size: 12px;
+            }
+        }
+        
+        /* Animações */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Estilo para o modo Pomodoro */
+        .pomodoro-active .status-circle {
+            border: 2px solid #F44336;
+        }
+        
+        .pomodoro-timer {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .pomodoro-label {
+            font-size: 14px;
+            margin-top: 5px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="notification" id="notification">Notificação</div>
+        
+        <!-- Tela inicial (Dashboard) -->
+        <div class="screen active" id="dashboard">
+            <div class="time" id="current-time">14:25</div>
+            <div class="dashboard">
+                <div class="status-circle" id="status-circle">
+                    <div class="status-indicator energy-indicator" id="energy-indicator"></div>
+                    <div class="status-indicator mood-indicator" id="mood-indicator"></div>
+                    <div class="status-indicator focus-indicator" id="focus-indicator"></div>
+                    <div class="status-indicator recovery-indicator" id="recovery-indicator"></div>
+                    <div class="status-text">Estado</div>
+                    <div class="status-value" id="status-avg">3/5</div>
+                </div>
+                <div class="module-icons">
+                    <div class="module-icon vitoria" onclick="showScreen('vitoria')">V</div>
+                    <div class="module-icon fisico" onclick="showScreen('fisico')">F</div>
+                    <div class="module-icon bem-estar" onclick="showScreen('bem-estar')">B</div>
+                    <div class="module-icon produtividade" onclick="showScreen('produtividade')">P</div>
+                </div>
+            </div>
+            <div class="date" id="current-date">Quinta, 10 Abr</div>
+        </div>
+        
+        <!-- Tela do Módulo Vitória -->
+        <div class="screen module-screen" id="vitoria">
+            <div class="back-button" onclick="showScreen('dashboard')"></div>
+            <div class="module-title">Vitória</div>
+            <div class="module-content">
+                <div class="task-item high-priority">
+                    <span>Relatório clínico</span>
+                    <span>14:30</span>
+                </div>
+                <div class="task-item">
+                    <span>Lembrar medicação</span>
+                    <span>15:00</span>
+                </div>
+                <div class="task-item">
+                    <span>Treino programado</span>
+                    <span>18:00</span>
+                </div>
+                <div class="task-item">
+                    <span>Ligar para Pérola</span>
+                    <span>19:30</span>
+                </div>
+                <div class="scale-selector">
+                    <div class="scale-item" onclick="selectScale(this, 1)">1</div>
+                    <div class="scale-item" onclick="selectScale(this, 2)">2</div>
+                    <div class="scale-item selected" onclick="selectScale(this, 3)">3</div>
+                    <div class="scale-item" onclick="selectScale(this, 4)">4</div>
+                    <div class="scale-item" onclick="selectScale(this, 5)">5</div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button primary" onclick="registerState()">Registrar Estado</button>
+                <button class="action-button secondary" onclick="startPomodoro()">Iniciar Pomodoro</button>
+            </div>
+        </div>
+        
+        <!-- Tela do Módulo Físico -->
+        <div class="screen module-screen" id="fisico">
+            <div class="back-button" onclick="showScreen('dashboard')"></div>
+            <div class="module-title">Performance Física</div>
+            <div class="module-content">
+                <div class="metric-item">
+                    <span>Batimentos</span>
+                    <span id="heart-rate">72 bpm</span>
+                </div>
+                <div class="metric-item">
+                    <span>Passos</span>
+                    <span id="steps-count">6,542</span>
+                </div>
+                <div class="metric-item">
+                    <span>Calorias</span>
+                    <span id="calories">320 kcal</span>
+                </div>
+                <div class="metric-item">
+                    <span>Último treino</span>
+                    <span>Ontem</span>
+                </div>
+                <div class="metric-item">
+                    <span>RPE médio</span>
+                    <span>7.5/10</span>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button primary" onclick="startWorkout()">Iniciar Treino</button>
+                <button class="action-button secondary" onclick="recordRPE()">Registrar RPE</button>
+            </div>
+        </div>
+        
+        <!-- Tela do Módulo Bem-Estar -->
+        <div class="screen module-screen" id="bem-estar">
+            <div class="back-button" onclick="showScreen('dashboard')"></div>
+            <div class="module-title">Bem-Estar</div>
+            <div class="module-content">
+                <div class="metric-item">
+                    <span>Humor</span>
+                    <span id="mood-value">4/5</span>
+                </div>
+                <div class="metric-item">
+                    <span>Energia</span>
+                    <span id="energy-value">3/5</span>
+                </div>
+                <div class="metric-item">
+                    <span>Foco</span>
+                    <span id="focus-value">3/5</span>
+                </div>
+                <div class="metric-item">
+                    <span>Recuperação</span>
+                    <span id="recovery-value">4/5</span>
+                </div>
+                <div class="metric-item">
+                    <span>Sono</span>
+                    <span id="sleep-value">6h 45m</span>
+                </div>
+                <div class="scale-selector">
+                    <div class="scale-item" onclick="selectWellbeingScale(this, 'mood', 1)">1</div>
+                    <div class="scale-item" onclick="selectWellbeingScale(this, 'mood', 2)">2</div>
+                    <div class="scale-item" onclick="selectWellbeingScale(this, 'mood', 3)">3</div>
+                    <div class="scale-item selected" onclick="selectWellbeingScale(this, 'mood', 4)">4</div>
+                    <div class="scale-item" onclick="selectWellbeingScale(this, 'mood', 5)">5</div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button primary" onclick="startBreathing()">Respiração 2min</button>
+                <button class="action-button secondary" onclick="configureReminders()">Configurar Lembretes</button>
+            </div>
+        </div>
+        
+        <!-- Tela do Módulo Produtividade -->
+        <div class="screen module-screen" id="produtividade">
+            <div class="back-button" onclick="showScreen('dashboard')"></div>
+            <div class="module-title">Produtividade</div>
+            <div class="module-content">
+                <div class="task-item high-priority">
+                    <span>Finalizar relatório</span>
+                    <span>Alta</span>
+                </div>
+                <div class="task-item medium-priority">
+                    <span>Revisar artigo</span>
+                    <span>Média</span>
+                </div>
+                <div class="task-item">
+                    <span>Email para cliente</span>
+                    <span>Baixa</span>
+                </div>
+                <div class="task-item">
+                    <span>Preparar apresentação</span>
+                    <span>Média</span>
+                </div>
+                <div class="task-item">
+                    <span>Agendar reunião</span>
+                    <span>Baixa</span>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button primary" onclick="startPomodoro()">Pomodoro 25/5</button>
+                <button class="action-button warning" onclick="addTask()">Adicionar Tarefa</button>
+            </div>
+        </div>
+        
+        <!-- Tela de Pomodoro -->
+        <div class="screen module-screen" id="pomodoro">
+            <div class="back-button" onclick="cancelPomodoro()"></div>
+            <div class="module-title">Pomodoro</div>
+            <div class="module-content">
+                <div class="status-circle">
+                    <svg class="progress-ring" width="100%" height="100%" viewBox="0 0 100 100">
+                        <circle id="pomodoro-progress" cx="50" cy="50" r="45" fill="transparent" stroke-width="5" stroke-dasharray="283" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="pomodoro-timer" id="pomodoro-timer">25:00</div>
+                    <div class="pomodoro-label" id="pomodoro-label">Foco</div>
+                </div>
+                <div class="task-item high-priority" id="current-task">
+                    <span>Finalizar relatório</span>
+                    <span>Em progresso</span>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button primary" id="pomodoro-control" onclick="togglePomodoro()">Pausar</button>
+                <button class="action-button warning" onclick="cancelPomodoro()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Estado do aplicativo
+        const appState = {
+            currentScreen: 'dashboard',
+            energy: 3,
+            mood: 4,
+            focus: 3,
+            recovery: 4,
+            pomodoro: {
+                active: false,
+                timeLeft: 25 * 60,
+                isBreak: false,
+                interval: null,
+                paused: false
+            },
+            tasks: [
+                { title: 'Finalizar relatório', priority: 'Alta', time: '14:30' },
+                { title: 'Revisar artigo', priority: 'Média', time: '' },
+                { title: 'Email para cliente', priority: 'Baixa', time: '' },
+                { title: 'Preparar apresentação', priority: 'Média', time: '' },
+                { title: 'Agendar reunião', priority: 'Baixa', time: '' }
+            ]
+        };
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            updateClock();
+            updateStatusIndicators();
+            setInterval(updateClock, 60000);
+            
+            // Registrar service worker para PWA
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registrado'))
+                    .catch(err => console.log('Erro ao registrar Service Worker', err));
+            }
+            
+            // Simular atualização de dados dos sensores
+            simulateSensorData();
+            
+            // Mostrar notificação de boas-vindas após 2 segundos
+            setTimeout(() => {
+                showNotification('Bem-vindo ao Paulo OS!', false);
+            }, 2000);
+        });
+        
+        // Atualizar relógio e data
+        function updateClock() {
+            const now = new Date();
+            const timeElement = document.getElementById('current-time');
+            const dateElement = document.getElementById('current-date');
+            
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            timeElement.textContent = `${hours}:${minutes}`;
+            
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            dateElement.textContent = now.toLocaleDateString('pt-BR', options);
+        }
+        
+        // Atualizar indicadores de estado
+        function updateStatusIndicators() {
+            const energyIndicator = document.getElementById('energy-indicator');
+            const moodIndicator = document.getElementById('mood-indicator');
+            const focusIndicator = document.getElementById('focus-indicator');
+            const recoveryIndicator = document.getElementById('recovery-indicator');
+            const statusAvg = document.getElementById('status-avg');
+            
+            // Ajustar opacidade com base nos valores (1-5)
+            energyIndicator.style.opacity = appState.energy * 0.2;
+            moodIndicator.style.opacity = appState.mood * 0.2;
+            focusIndicator.style.opacity = appState.focus * 0.2;
+            recoveryIndicator.style.opacity = appState.recovery * 0.2;
+            
+            // Calcular média
+            const avg = Math.round((appState.energy + appState.mood + appState.focus + appState.recovery) / 4);
+            statusAvg.textContent = `${avg}/5`;
+            
+            // Atualizar valores nos módulos
+            document.getElementById('energy-value').textContent = `${appState.energy}/5`;
+            document.getElementById('mood-value').textContent = `${appState.mood}/5`;
+            document.getElementById('focus-value').textContent = `${appState.focus}/5`;
+            document.getElementById('recovery-value').textContent = `${appState.recovery}/5`;
+        }
+        
+        // Navegação entre telas
+        function showScreen(screenId) {
+            const currentScreen = document.querySelector('.screen.active');
+            const targetScreen = document.getElementById(screenId);
+            
+            if (currentScreen) {
+                currentScreen.classList.remove('active');
+            }
+            
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                appState.currentScreen = screenId;
+            }
+        }
+        
+        // Selecionar valor na escala
+        function selectScale(element, value) {
+            const scaleItems = element.parentElement.querySelectorAll('.scale-item');
+            scaleItems.forEach(item => item.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+        
+        // Selecionar valor na escala de bem-estar
+        function selectWellbeingScale(element, metric, value) {
+            const scaleItems = element.parentElement.querySelectorAll('.scale-item');
+            scaleItems.forEach(item => item.classList.remove('selected'));
+            element.classList.add('selected');
+            
+            // Atualizar estado
+            appState[metric] = value;
+            document.getElementById(`${metric}-value`).textContent = `${value}/5`;
+            
+            // Atualizar indicadores
+            updateStatusIndicators();
+            
+            // Mostrar feedback
+            showNotification(`${metric.charAt(0).toUpperCase() + metric.slice(1)} atualizado para ${value}/5`, false);
+        }
+        
+        // Registrar estado atual
+        function registerState() {
+            const selectedValue = document.querySelector('#vitoria .scale-item.selected');
+            const value = selectedValue ? parseInt(selectedValue.textContent) : 3;
+            
+            appState.energy = value;
+            updateStatusIndicators();
+            showNotification('Estado registrado com sucesso!', false);
+            
+            // Voltar para o dashboard após um breve delay
+            setTimeout(() => {
+                showScreen('dashboard');
+            }, 1500);
+        }
+        
+        // Iniciar Pomodoro
+        function startPomodoro() {
+            appState.pomodoro.active = true;
+            appState.pomodoro.timeLeft = 25 * 60;
+            appState.pomodoro.isBreak = false;
+            appState.pomodoro.paused = false;
+            
+            // Atualizar interface
+            document.getElementById('pomodoro-timer').textContent = '25:00';
+            document.getElementById('pomodoro-label').textContent = 'Foco';
+            document.getElementById('pomodoro-control').textContent = 'Pausar';
+            
+            // Definir tarefa atual
+            const currentTask = document.getElementById('current-task');
+            currentTask.querySelector('span:first-child').textContent = appState.tasks[0].title;
+            
+            // Iniciar timer
+            startPomodoroTimer();
+            
+            // Mostrar tela de pomodoro
+            showScreen('pomodoro');
+            
+            // Mostrar notificação
+            showNotification('Pomodoro iniciado! Foco por 25 minutos.', false);
+        }
+        
+        // Iniciar timer do Pomodoro
+        function startPomodoroTimer() {
+            // Limpar intervalo existente
+            if (appState.pomodoro.interval) {
+                clearInterval(appState.pomodoro.interval);
+            }
+            
+            // Configurar círculo de progresso
+            const circle = document.getElementById('pomodoro-progress');
+            const circumference = 2 * Math.PI * 45;
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            
+            // Iniciar novo intervalo
+            appState.pomodoro.interval = setInterval(() => {
+                if (!appState.pomodoro.paused) {
+                    appState.pomodoro.timeLeft--;
+                    
+                    // Atualizar timer
+                    const minutes = Math.floor(appState.pomodoro.timeLeft / 60);
+                    const seconds = appState.pomodoro.timeLeft % 60;
+                    document.getElementById('pomodoro-timer').textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Atualizar círculo de progresso
+                    const totalTime = appState.pomodoro.isBreak ? 5 * 60 : 25 * 60;
+                    const progress = appState.pomodoro.timeLeft / totalTime;
+                    const offset = circumference - (progress * circumference);
+                    circle.style.strokeDashoffset = offset;
+                    
+                    // Verificar se o timer acabou
+                    if (appState.pomodoro.timeLeft <= 0) {
+                        clearInterval(appState.pomodoro.interval);
+                        
+                        if (appState.pomodoro.isBreak) {
+                            // Fim do intervalo
+                            appState.pomodoro.isBreak = false;
+                            appState.pomodoro.timeLeft = 25 * 60;
+                            document.getElementById('pomodoro-label').textContent = 'Foco';
+                            showNotification('Intervalo concluído! Hora de focar novamente.', true);
+                        } else {
+                            // Fim do foco
+                            appState.pomodoro.isBreak = true;
+                            appState.pomodoro.timeLeft = 5 * 60;
+                            document.getElementById('pomodoro-label').textContent = 'Intervalo';
+                            showNotification('Parabéns! Hora de fazer uma pausa.', true);
+                        }
+                        
+                        // Reiniciar timer
+                        startPomodoroTimer();
+                    }
+                }
+            }, 1000);
+        }
+        
+        // Pausar/Continuar Pomodoro
+        function togglePomodoro() {
+            appState.pomodoro.paused = !appState.pomodoro.paused;
+            const controlButton = document.getElementById('pomodoro-control');
+            controlButton.textContent = appState.pomodoro.paused ? 'Continuar' : 'Pausar';
+            
+            showNotification(appState.pomodoro.paused ? 'Pomodoro pausado' : 'Pomodoro continuando', false);
+        }
+        
+        // Cancelar Pomodoro
+        function cancelPomodoro() {
+            if (appState.pomodoro.interval) {
+                clearInterval(appState.pomodoro.interval);
+            }
+            
+            appState.pomodoro.active = false;
+            showScreen('dashboard');
+            showNotification('Pomodoro cancelado', false);
+        }
+        
+        // Iniciar treino
+        function startWorkout() {
+            showNotification('Iniciando monitoramento de treino...', false);
+            // Aqui seria implementada a integração com os sensores do relógio
+            setTimeout(() => {
+                showNotification('Treino iniciado! Boa sessão!', true);
+            }, 2000);
+        }
+        
+        // Registrar RPE
+        function recordRPE() {
+            showNotification('Selecione o nível de esforço percebido (1-10)', false);
+            // Implementação simplificada
+        }
+        
+        // Iniciar exercício de respiração
+        function startBreathing() {
+            showNotification('Iniciando exercício de respiração de 2 minutos', false);
+            // Implementação simplificada
+        }
+        
+        // Configurar lembretes
+        function configureReminders() {
+            showNotification('Configuração de lembretes não disponível no protótipo', false);
+        }
+        
+        // Adicionar tarefa
+        function addTask() {
+            showNotification('Adição de tarefas não disponível no protótipo', false);
+        }
+        
+        // Mostrar notificação
+        function showNotification(message, isUrgent) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.remove('show', 'urgent');
+            
+            // Forçar reflow
+            void notification.offsetWidth;
+            
+            notification.classList.add('show');
+            if (isUrgent) {
+                notification.classList.add('urgent');
+                // Vibrar (se disponível)
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+            }
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Simular dados dos sensores
+        function simulateSensorData() {
+            setInterval(() => {
+                // Simular batimentos cardíacos
+                const heartRate = 65 + Math.floor(Math.random() * 15);
+                document.getElementById('heart-rate').textContent = `${heartRate} bpm`;
+                
+                // Simular passos
+                const currentSteps = parseInt(document.getElementById('steps-count').textContent.replace(',', ''));
+                const newSteps = currentSteps + Math.floor(Math.random() * 10);
+                document.getElementById('steps-count').textContent = newSteps.toLocaleString();
+                
+                // Simular calorias
+                const currentCalories = parseInt(document.getElementById('calories').textContent);
+                const newCalories = currentCalories + Math.floor(Math.random() * 3);
+                document.getElementById('calories').textContent = `${newCalories} kcal`;
+                
+                // Simular notificações ocasionais
+                if (Math.random() < 0.05 && appState.currentScreen === 'dashboard') {
+                    const notifications = [
+                        'Lembrete: Tomar água',
+                        'Hora de se movimentar um pouco!',
+                        'Lembrete de medicação em 15 minutos',
+                        'Reunião em 30 minutos'
+                    ];
+                    const randomNotification = notifications[Math.floor(Math.random() * notifications.length)];
+                    showNotification(randomNotification, Math.random() < 0.3);
+                }
+            }, 10000);
+        }
+    </script>
+</body>
+</html>
