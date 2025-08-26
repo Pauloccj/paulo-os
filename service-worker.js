@@ -74,7 +74,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
   const title = 'Paulo OS';
   const options = {
-    body: event.data.text(),
+    body: event.data ? event.data.text() : 'Nova notificação',
     icon: './icons/icon-192.png',
     vibrate: [100, 50, 100],
     data: {
